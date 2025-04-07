@@ -7,8 +7,8 @@ services:
       context: .
     ports:
       - "8000:8000"
-    environment:
-      KEY: "VB8HW3BL3WELMPQ2CYTJPXT8E"
+    env_file:
+      ./cmd/env/.env
     cap_drop:
       - ALL
     read_only: true
