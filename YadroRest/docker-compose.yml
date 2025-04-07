@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  app:
+    image: yadro_image
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    environment:
+      KEY: "VB8HW3BL3WELMPQ2CYTJPXT8E"
+    cap_drop:
+      - ALL
+    read_only: true
