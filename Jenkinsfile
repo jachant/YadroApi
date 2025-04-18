@@ -3,8 +3,9 @@ pipeline {
 
     environment {
         DOCKER_HUB_CREDENTIALS = credentials('docker-hub-creds')
-        IMAGE_NAME = 'jachant/yadro'
+        IMAGE_NAME = "jachant/yadro"  // Полное имя репозитория Docker Hub
         BRANCH_NAME = "${env.BRANCH_NAME ?: 'unknown'}".replaceAll('/', '-')
+        APP_VERSION = "1.0.0"
     }
 
     stages {
@@ -13,7 +14,7 @@ pipeline {
                 checkout scm
                 script {
                     if (!fileExists('Dockerfile')) {
-                        error("❌ Dockerfile не найден!")
+                        error("❌ Dockerfile не найден в репозитории.")
                     }
                 }
             }
@@ -22,7 +23,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${IMAGE_NAME}:${BRANCH_NAME}", '.')
+                    // Сборка с полным путем Docker Hub
+                    docker.build("${IMAGE_NAME}:${BRANCH_NAME}-${APP_VERSION}", '.')
                 }
             }
         }
@@ -31,7 +33,28 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-creds') {
-                        docker.image("${IMAGE_NAME}:${BRANCH_NAME}").push()
+                        // Пуш основного тега
+                        docker.image("${IMAGE_NAME}:${BRANCH_NAME}-${APP_VERSION}").push()
+                        
+                        // Добавляем тег latest для main/master
+                        if (BRANCH_NAME == 'main' || BRANCH_NAME == 'master') {
+                            docker.image("${IMAGE_NAME}:${BRANCH_NAME}-${APP_VERSION}")
+                                .tag("${IMAGE_NAME}:latest")
+                            docker.image("${IMAGE_NAME}:latest").push()
+                            echo "🚀 Образ ${IMAGE_NAME}:latest обновлен"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                script {
+                    // Удаляем локальные образы после пуша
+                    sh "docker rmi ${IMAGE_NAME}:${BRANCH_NAME}-${APP_VERSION} || true"
+                    if (BRANCH_NAME == 'main' || BRANCH_NAME == 'master') {
+                        sh "docker rmi ${IMAGE_NAME}:latest || true"
                     }
                 }
             }
@@ -40,13 +63,13 @@ pipeline {
 
     post {
         always {
-            cleanWs() // Очистка рабочей директории
+            sh 'docker logout registry.hub.docker.com || true'
         }
         success {
-            echo "✅ Образ ${IMAGE_NAME}:${BRANCH_NAME} успешно опубликован!"
+            echo "✅ Образ ${IMAGE_NAME}:${BRANCH_NAME}-${APP_VERSION} успешно опубликован!"
         }
         failure {
-            echo "❌ Сборка завершилась с ошибкой."
+            echo "❌ Ошибка при публикации образа"
         }
     }
 }
