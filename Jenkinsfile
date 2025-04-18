@@ -8,17 +8,16 @@ pipeline {
         APP_VERSION = "1.0.0"
     }
 
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-                script {
-                    if (!fileExists('Dockerfile')) {
-                        error("❌ Dockerfile не найден в репозитории.")
-                    }
-                }
+   stage('Checkout') {
+    steps {
+        checkout scm
+        script {
+            if (!fileExists('YadroRest/Dockerfile')) {  // ← Указываем путь
+                error("❌ Dockerfile не найден!")
             }
         }
+    }
+
 
         stage('Build Docker Image') {
             steps {
