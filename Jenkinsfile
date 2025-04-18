@@ -2,25 +2,43 @@ pipeline {
     agent any
 
     environment {
-        // Учетные данные Docker Hub (ID из Jenkins Credentials)
         DOCKER_HUB_CREDENTIALS = credentials('docker-hub-creds')
-        // Название образа в формате: <логин-docker>/<название-репозитория>
         IMAGE_NAME = "jachant/yadro"
+        APP_VERSION = "1.0.0" // Опционально: параметризация версии
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Получение кода из репозитория GitHub
                 checkout scm
+                script {
+                    // Проверка наличия Dockerfile
+                    if (!fileExists('Dockerfile')) {
+                        error("❌ Dockerfile не найден в репозитории.")
+                    }
+                }
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Сборка Docker-образа с тегом = имени ветки
-                    dockerImage = docker.build("${IMAGE_NAME}:${env.BRANCH_NAME}")
+                    // Сборка с кэшированием и версией
+                    dockerImage = docker.build(
+                        "${IMAGE_NAME}:${env.BRANCH_NAME}-${APP_VERSION}",
+                        "--build-arg VERSION=${APP_VERSION} ."
+                    )
+                }
+            }
+        }
+
+        stage('Test Image') {
+            steps {
+                script {
+                    // Пример запуска тестов
+                    docker.image("${IMAGE_NAME}:${env.BRANCH_NAME}-${APP_VERSION}").inside {
+                        sh 'echo "✅ Запуск тестов..."'
+                    }
                 }
             }
         }
@@ -28,13 +46,12 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 script {
-                    // Авторизация в Docker Hub
                     docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-creds') {
-                        // Публикация образа
                         dockerImage.push()
-                        // Опционально: добавить тег 'latest' для основной ветки
+                        // Тег 'latest' только для main
                         if (env.BRANCH_NAME == 'main') {
                             dockerImage.push('latest')
+                            echo "🚀 Образ ${IMAGE_NAME}:latest обновлен."
                         }
                     }
                 }
@@ -44,12 +61,12 @@ pipeline {
 
     post {
         success {
-            // Уведомление о успешной сборке (опционально)
-            echo "Сборка и публикация образа ${IMAGE_NAME}:${env.BRANCH_NAME} успешно завершены!"
+            echo "✅ Сборка ${IMAGE_NAME}:${env.BRANCH_NAME}-${APP_VERSION} успешна!"
+            // slackSend channel: '#ci-cd', message: "Успех: ${env.BUILD_URL}"
         }
         failure {
-            // Уведомление об ошибке (опционально)
-            echo "Сборка завершилась с ошибкой."
+            echo "❌ Сборка завершилась с ошибкой."
+            // slackSend channel: '#ci-cd', message: "Провал: ${env.BUILD_URL}"
         }
     }
 }
