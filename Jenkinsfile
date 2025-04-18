@@ -8,7 +8,13 @@ pipeline {
         APP_VERSION = "1.0.0"
     }
 
-    stages { // ← ОБЯЗАТЕЛЬНЫЙ БЛОК
+    stages {
+        stage('Check Docker') {
+            steps {
+                sh 'docker --version || (echo "Docker не установлен!" && exit 1)'
+            }
+        }
+
         stage('Checkout') {
             steps {
                 checkout scm
@@ -36,19 +42,7 @@ pipeline {
                         if (BRANCH_NAME == 'main' || BRANCH_NAME == 'master') {
                             docker.image("${IMAGE_NAME}:${BRANCH_NAME}-${APP_VERSION}").tag("${IMAGE_NAME}:latest")
                             docker.image("${IMAGE_NAME}:latest").push()
-                            echo "🚀 Образ ${IMAGE_NAME}:latest обновлен"
                         }
-                    }
-                }
-            }
-        }
-
-        stage('Cleanup') {
-            steps {
-                script {
-                    sh "docker rmi ${IMAGE_NAME}:${BRANCH_NAME}-${APP_VERSION} || true"
-                    if (BRANCH_NAME == 'main' || BRANCH_NAME == 'master') {
-                        sh "docker rmi ${IMAGE_NAME}:latest || true"
                     }
                 }
             }
