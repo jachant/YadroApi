@@ -19,7 +19,7 @@ pipeline {
             steps {
                 checkout scm
                 script {
-                    if (!fileExists('YadroRest/Dockerfile')) {
+                    if (!fileExists('Dockerfile')) {
                         error("❌ Dockerfile не найден!")
                     }
                 }
