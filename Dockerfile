@@ -9,6 +9,7 @@ RUN go mod download  && \
 FROM alpine:3.21
 WORKDIR /app
 
+
 RUN addgroup -S mygroup && adduser -S -G mygroup myuser
 USER myuser
 
