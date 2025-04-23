@@ -1,0 +1,5 @@
+- name: Установить CRI-O
+  ansible.builtin.dnf:
+    name: "cri-o-{{ crio_version }}"
+    state: present
+  notify: Перезапустить CRI-O

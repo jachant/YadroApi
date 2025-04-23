@@ -1,0 +1,8 @@
+- name: Установить Kubernetes
+  ansible.builtin.dnf:
+    name:
+      - kubelet-{{ k8s_version }}
+      - kubeadm-{{ k8s_version }}
+      - kubectl-{{ k8s_version }}
+    state: present
+  notify: Перезапустить kubelet
