@@ -1,0 +1,6 @@
+- name: Установка CRI-O и Kubernetes
+  hosts: all
+  become: yes
+  roles:
+    - cri-o
+    - kubernetes-components
